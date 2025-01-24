@@ -535,7 +535,7 @@
     <value>自述文件\n</value>
   </data>
   <data name="XAML_InfoLinkHKMM" xml:space="preserve">
-    <value>HK Mod\nManager</value>
+    <value></value>
   </data>
   <data name="XAML_InfoLinkHKMMToolTip" xml:space="preserve">
     <value>另一个 Mod 安装器</value>
