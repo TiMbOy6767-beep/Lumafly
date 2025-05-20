@@ -123,7 +123,7 @@ function makeInputPage() {
     .then(data => {
         data = data.substr(21); // remove xml version header
 
-        let xmlCommentRegex = /<!--[\S\s]+-->/g;
+        let xmlCommentRegex = /<!--[\S\s]*?-->/g;
         data = data.replace(xmlCommentRegex, ""); // remove comments
 
         const json = JSON.parse(xml2json(data));
