@@ -718,7 +718,7 @@
     <value>Enable/Disable the Modding API, the modification to the game files that allow mods to run</value>
   </data>
   <data name="ViewReadme" xml:space="preserve">
-    <value>View Readme</value>
+    <value>Voir le ReadMe</value>
   </data>
   <data name="ModLinks_Tags_Untagged" xml:space="preserve">
     <value>Untagged</value>
