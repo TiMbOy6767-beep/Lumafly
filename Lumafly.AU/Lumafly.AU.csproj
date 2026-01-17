@@ -10,7 +10,7 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
 
-        <PublishAot>true</PublishAot>
+        <PublishAot Condition="'$(RuntimeIdentifier)' == 'win-x64'">true</PublishAot>
         <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
         <DebugType>embedded</DebugType>
         <ApplicationManifest>app.manifest</ApplicationManifest>
