@@ -8,6 +8,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
+using Avalonia.Dialogs;
 using Avalonia.Media;
 using Avalonia.Media.Fonts;
 using Avalonia.ReactiveUI;
@@ -219,6 +220,9 @@ namespace Lumafly
                         new Uri("fonts:Noto Sans", UriKind.Absolute),
                         new Uri("avares://Lumafly/Assets/Fonts/NotoSans", UriKind.Absolute)));
                 });
+            
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                builder.UseManagedSystemDialogs();
 
             foreach ((string culture, string fontFamily) in fontOverrides) {
                 SetCultureSpecificFontOptions(builder, culture, fontFamily);
