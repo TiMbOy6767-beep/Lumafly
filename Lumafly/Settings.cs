@@ -90,7 +90,7 @@ namespace Lumafly
         .ToImmutableList();
         // @formatter:on
         
-        public static string ConfigFolderPath => Path.Combine
+        public static string ConfigFolderPath { get; } = Path.Combine
         (
             Environment.GetFolderPath
             (
@@ -99,6 +99,14 @@ namespace Lumafly
             ),
             "HKModInstaller"
         );
+        public static string MacAltPath {
+            get {
+                if (field != null)
+                    return field;
+                var home = Environment.GetEnvironmentVariable("HOME")!;
+                return field = Path.Combine(home, ".config", "HKModInstaller");
+            }
+        }
         
         private static string ConfigPath => Path.Combine(ConfigFolderPath, "HKInstallerSettings.json");
         public string CacheFolder => Path.Combine(ConfigFolderPath, "HKInstallerCache");
@@ -236,12 +244,17 @@ namespace Lumafly
 
         public static Settings? Load()
         {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX) && !File.Exists(ConfigPath))
+            {
+                var oldConfig = Path.Combine(MacAltPath, "HKInstallerSettings.json");
+                if (File.Exists(oldConfig))
+                    File.Move(oldConfig, ConfigPath, true);
+            }
+
             if (!File.Exists(ConfigPath))
                 return null;
-
             Debug.WriteLine($"ConfigPath: File @ {ConfigPath} exists.");
-
-            string content = File.ReadAllText(ConfigPath);
+            var content = File.ReadAllText(ConfigPath);
 
             try
             {

@@ -5,6 +5,7 @@ using System.Diagnostics.Contracts;
 using System.IO;
 using System.IO.Abstractions;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
@@ -56,6 +57,13 @@ namespace Lumafly.Services
 
             try
             {
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX) && !File.Exists(ConfigPath))
+                {
+                    var oldConfig = Path.Combine(Settings.MacAltPath, FILE_NAME);
+                    if (File.Exists(oldConfig))
+                        File.Move(oldConfig, ConfigPath, true);
+                }
+
                 db = JsonSerializer.Deserialize<InstalledMods>(await File.ReadAllTextAsync(ConfigPath))
                     ?? throw new InvalidDataException();
             } catch (Exception e) when (e is InvalidDataException or JsonException or FileNotFoundException)
