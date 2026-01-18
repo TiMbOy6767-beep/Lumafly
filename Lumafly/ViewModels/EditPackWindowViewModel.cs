@@ -89,7 +89,7 @@ public partial class EditPackWindowViewModel : ViewModelBase
         {
             Dispatcher.UIThread.Invoke(async () => await MessageBoxUtil
                 .GetMessageBoxStandardWindow("Warning", "This mod is not available on modlinks.")
-                .ShowAsPopupAsync(PackManager.CurrentPackWindow));
+                .ShowAsPopupAsync(PackManager.CurrentPackWindow!));
             return;
         }
         

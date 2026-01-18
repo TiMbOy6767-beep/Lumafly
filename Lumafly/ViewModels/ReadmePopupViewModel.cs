@@ -1,26 +1,41 @@
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Lumafly.Models;
+using Lumafly.Util;
+using Markdown.Avalonia;
+using Markdown.Avalonia.Plugins;
+using Markdown.Avalonia.Utils;
 
 namespace Lumafly.ViewModels
 {
     public class ReadmePopupViewModel : ViewModelBase
     {
+        private readonly static Uri RawGithubUserContentUri = new("https://raw.githubusercontent.com");
+
         private readonly ModItem _modItem;
         public bool IsRequestingReleaseNotes { get; }
         private static readonly HttpClient _hc;
         private string requestName => IsRequestingReleaseNotes ? "Release Notes" : "Readme";
 
         private string ReadmeLink = "";
-        
+
+        public MdAvPlugins MarkdownPlugins { get; init; }
+
         public ReadmePopupViewModel(ModItem modItem, bool requestingReleaseNotes = false)
         {
             _modItem = modItem;
             IsRequestingReleaseNotes = requestingReleaseNotes;
+
+            MarkdownPlugins = new() {
+                PathResolver = new Resolver(_modItem)
+            };
 
             Task.Run(async () =>
             {
@@ -74,6 +89,7 @@ namespace Lumafly.ViewModels
         {
             _hc = new HttpClient();
             _hc.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github.v3+json"));
+            _hc.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("image/*"));
             _hc.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("Lumafly", "1.0"));
         }
         
@@ -93,7 +109,7 @@ namespace Lumafly.ViewModels
                     JsonDocument json = JsonDocument.Parse(jsonResponse);
                     json.RootElement.TryGetProperty("download_url", out var downloadUrlProperty);
 
-                    ReadmeLink = json.RootElement.GetProperty("html_url").GetString();
+                    ReadmeLink = json.RootElement.GetProperty("html_url").GetString() ?? string.Empty;
 
                     // Make a request to fetch the README content
                     HttpResponseMessage readmeResponse = await _hc.GetAsync(downloadUrlProperty.GetString());
@@ -144,6 +160,47 @@ namespace Lumafly.ViewModels
             {
                 // we don't want view readme button to display release notes
                 _modItem.Readme = null;
+            }
+        }
+
+        private sealed class Resolver(ModItem mod) : IPathResolver
+        {
+            public string? AssetPathRoot { set {} }
+            public IEnumerable<string>? CallerAssemblyNames { set {} }
+
+            public async Task<Stream?>? ResolveImageResource(string relativeOrAbsolutePath)
+            {
+                try
+                {
+                    if (!Uri.TryCreate(relativeOrAbsolutePath, UriKind.RelativeOrAbsolute, out var uri))
+                        return null;
+
+                    if (uri.IsAbsoluteUri)
+                    {
+                        if (uri.Scheme != Uri.UriSchemeHttp || uri.Scheme != Uri.UriSchemeHttps ||
+                            uri.Host != "github.com" || !uri.Host.EndsWith(".github.com"))
+                            return null;
+
+                        var res = await _hc.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead);
+                        return await res.Content.ReadAsStreamAsync();
+                    }
+
+                    if (
+                        Uri.TryCreate(mod.Repository, UriKind.Absolute, out var repoUri)
+                        && Uri.TryCreate(
+                            RawGithubUserContentUri,
+                            Path.Combine(repoUri.AbsolutePath, "HEAD", relativeOrAbsolutePath.TrimStart('/')),
+                            out var absUri)
+                    ) {
+                        var res = await _hc.GetAsync(absUri, HttpCompletionOption.ResponseHeadersRead);
+                        return await res.Content.ReadAsStreamAsync();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Trace.Write(ex);
+                }
+                return null;
             }
         }
     }

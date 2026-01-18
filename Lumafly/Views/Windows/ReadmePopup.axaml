@@ -33,7 +33,7 @@
             Grid.Row="1"
             Markdown="{Binding Readme}" 
             Margin="30 0"
-            />
+            Name="MarkdownViewer" />
         
         <Button 
             HotKey="Ctrl+W"

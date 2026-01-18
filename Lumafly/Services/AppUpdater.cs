@@ -32,7 +32,7 @@ public class AppUpdater : IAppUpdater
         _sparkleUpdater = new SparkleUpdater("https://raw.githubusercontent.com/TheMulhima/Lumafly/master/appcast.xml",
             new DSAChecker(SecurityMode.Unsafe)) // use unsafe because I cant be bothered with signing the appcast and stuff
         {
-            UIFactory = new UIFactory(null)
+            UIFactory = new UIFactory(null!)
             {
                 AdditionalReleaseNotesHeaderHTML = """
                 <style> 
@@ -50,12 +50,10 @@ public class AppUpdater : IAppUpdater
                 </div>
                 """,
             },
-            ShowsUIOnMainThread = true, // required for avalonia
             ClearOldInstallers = RemoveOldAUs,
             TmpDownloadFilePath = Settings.GetOrCreateDirPath(), // download to appdata folder which we have full perms in
             // run installer with exe name and path so lumafly is replaced correctly
             CustomInstallerArguments = Environment.GetCommandLineArgs()[0], // send the full exe path to the installer so it can replace it correctly
-            SecurityProtocolType = SecurityProtocolType.Tls12, // required by github
             // GitHub doesn't support CheckServerFileName, if server is checked, it returns a UUID without any file extension which is not windows friendly
             CheckServerFileName = false,
             RelaunchAfterUpdate = true,
@@ -104,7 +102,7 @@ public class AppUpdater : IAppUpdater
     /// <summary>
     /// Show a popup when the update fails or cancelled, Will open the update link on the browser and close the app
     /// </summary>
-    private void OnDownloadError(AppCastItem? item, string path, Exception exception)
+    private void OnDownloadError(AppCastItem? item, string? path, Exception exception)
     {
         Dispatcher.UIThread.InvokeAsync(async () =>
         {
