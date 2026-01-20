@@ -20,12 +20,11 @@ using System.Threading.Tasks;
 
 namespace Lumafly
 {
-    [Serializable]
-    public class Settings : ISettings
+    public partial class Settings : ISettings
     {
         public string ManagedFolder { get; set; }
 
-        [JsonConverter(typeof(JsonStringEnumConverter))]
+        [JsonConverter(typeof(JsonStringEnumConverter<AutoRemoveUnusedDepsOptions>))]
         public AutoRemoveUnusedDepsOptions AutoRemoveUnusedDeps { get; set; } = AutoRemoveUnusedDepsOptions.Never;
         public bool WarnBeforeRemovingDependents { get; set; } = true;
         public bool UseCustomModlinks { get; set; }
@@ -33,9 +32,10 @@ namespace Lumafly
         public bool UseGithubMirror { get; set; }
         public string GithubMirrorFormat { get; set; } = string.Empty;
         
-        [JsonConverter(typeof(JsonStringEnumConverter))]
+        [JsonConverter(typeof(JsonStringEnumConverter<SupportedLanguages>))]
         public SupportedLanguages? PreferredLanguage { get; set; }
         public bool LowStorageMode { get; set; } = false;
+        [JsonIgnore]
         public string ExtraSpaceTaken
         {
             get
@@ -279,10 +279,7 @@ namespace Lumafly
 
         public void Save()
         {
-            string content = JsonSerializer.Serialize(this, new JsonSerializerOptions()
-            {
-                WriteIndented = true,
-            });
+            string content = JsonSerializer.Serialize(this, SettingsSerializer.Default.Settings);
 
             GetOrCreateDirPath();
 
@@ -290,5 +287,12 @@ namespace Lumafly
 
             File.WriteAllText(path, content);
         }
+
+        [JsonSerializable(typeof(Settings))]
+        [JsonSourceGenerationOptions(
+            IgnoreReadOnlyProperties = true,
+            WriteIndented = true
+        )]
+        private partial class SettingsSerializer: JsonSerializerContext;
     }
 }
