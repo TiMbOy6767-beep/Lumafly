@@ -61,13 +61,35 @@ public partial class InfoViewModel : ViewModelBase
         try
         {
             // remove any existing hk instance
-            static bool IsHollowKnight(Process p) => (
-                p.ProcessName.StartsWith(hollow_knight)
-                || p.ProcessName.StartsWith(HollowKnight)
-            );
-            
-            if (Process.GetProcesses().FirstOrDefault(IsHollowKnight) is { } proc) 
-                proc.Kill();
+            try
+            {
+                foreach (var proc in Process.GetProcesses()
+                    .Where(static p => p.ProcessName.StartsWith(hollow_knight) || p.ProcessName.StartsWith(HollowKnight)))
+                {
+                    var killed = false;
+                    try
+                    {
+                        // don't waste more than 5 secs on this
+                        var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                        if (killed = !proc.CloseMainWindow())
+                            proc.Kill(true);
+                        else
+                            Trace.WriteLine("found a window to close"); // TODO: remove
+                        await proc.WaitForExitAsync(cts.Token);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        if (!killed)
+                            proc.Kill(true); // might as well still try a kill
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine(ex);
+                if (!await DisplayErrors.DisplayAreYouSureWarning(Resources.HKAlreadyRunning.Replace("\\n", "\n")))
+                    return;
+            } // this is not vital
 
             await _installer.CheckAPI();
 
@@ -104,8 +126,10 @@ public partial class InfoViewModel : ViewModelBase
         {
             await DisplayErrors.DisplayGenericError($"Unable to launch the game", e);
         }
-
-        IsLaunchingGame = false;
+        finally
+        {
+            IsLaunchingGame = false;
+        }
     }
 
     private (string path, string name, bool isSteam) GetExecutableDetails()
@@ -121,31 +145,40 @@ public partial class InfoViewModel : ViewModelBase
         // mac os path has 2 extra folders
         if (OperatingSystem.IsMacOS())
         {
-            hkExeFolder = managedParent.Parent! // now in contents folder
-                .Parent; // now in hk exe folder
-
-            // an assumption that mac paths are always hollow_knight. probably wrong but idk what to do hopefully the 1 person who has 
-            // Mac and is not on steam reports error ¯\_(ツ)_/¯
-            exeName = hollow_knight;
+            // an executable exists at hollow_knight.app/Contents/MacOS/Hollow Knight
+            // I am unsure if directly running it works, but I have now way to test
+            hkExeFolder = hkExeFolder!.Parent!; // now in contents folder
+            hkExeFolder = new(Path.Combine(hkExeFolder.FullName, "MacOS"));
+            exeName = HollowKnight;
         }
         else
         {
             exeName = managedParent.Name.Replace("_Data", string.Empty); //unity appends _Data to end of exe name
         }
 
-        // cuz windows is non unix 
-        if (OperatingSystem.IsWindows()) exeName += ".exe";
+        if (OperatingSystem.IsWindows())
+            exeName += ".exe";
+        else if (OperatingSystem.IsLinux())
+            exeName += ".x86_64";
 
         if (hkExeFolder is null) throw new Exception("Hollow Knight executable not found");
         string exePath = hkExeFolder.FullName;
         
-        // check if path contains steam_api64.dll
-        var isSteam = File.Exists(Path.Combine(
-            managedParent.FullName,
-            "Plugins",
-            "x86_64",
-            "steam_api64.dll"
-        ));
+        // check if path contains steam_api file
+        var pluginsFolder = Path.Combine(managedParent.FullName, "Plugins");
+        if (OperatingSystem.IsMacOS())
+            pluginsFolder = Path.Combine(hkExeFolder.Parent!.FullName, "PlugIns");
+        
+        var isSteam = false;
+        // avoid notfound exceptions in the rare case folder structure changes
+        if (Directory.Exists(pluginsFolder))
+        {
+            isSteam = Directory.EnumerateFiles(
+                pluginsFolder,
+                "*steam_api*",
+                SearchOption.AllDirectories
+            ).Any();
+        }
         
         return (exePath, exeName, isSteam);
     }

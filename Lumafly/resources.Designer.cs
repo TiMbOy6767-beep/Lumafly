@@ -1903,5 +1903,14 @@ namespace Lumafly {
                 return ResourceManager.GetString("XAML_WarnBeforeRemovingDependentMods", resourceCulture);
             }
         }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Hollow Knight was detected as already running, but Lumafly could not stop it.\nPlease make sure Hollow Knight is closed.\nDo you want to continue?.
+        /// </summary>
+        internal static string HKAlreadyRunning {
+            get {
+                return ResourceManager.GetString("HKAlreadyRunning", resourceCulture);
+            }
+        }
     }
 }
